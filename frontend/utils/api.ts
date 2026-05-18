@@ -212,6 +212,11 @@ export const api = {
     return data;
   },
 
+  deleteChat: async (chatId: string) => {
+    const { data } = await apiClient.delete(`/chats/${chatId}`);
+    return data;
+  },
+
   getMessages: async (chatId: string, skip: number = 0, limit: number = 50) => {
     const { data } = await apiClient.get(`/messages/${chatId}`, {
       params: { skip, limit }

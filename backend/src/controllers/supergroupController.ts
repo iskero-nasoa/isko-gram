@@ -263,6 +263,38 @@ export const updateSupergroupTopic = async (req: Request, res: Response): Promis
   }
 };
 
+// Delete supergroup (admin only)
+export const deleteSupergroup = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?._id;
+
+    const supergroup = await Supergroup.findById(id);
+    if (!supergroup) {
+      res.status(404).json({ message: "Supergroup not found" });
+      return;
+    }
+
+    if (supergroup.admin.toString() !== userId?.toString()) {
+      res.status(403).json({ message: "Only admin can delete this supergroup" });
+      return;
+    }
+
+    const topics = await Topic.find({ supergroupId: new mongoose.Types.ObjectId(id as string) });
+    const topicIds = topics.map((t) => t._id);
+    await Message.deleteMany({ topicId: { $in: topicIds } });
+    await Topic.deleteMany({ supergroupId: new mongoose.Types.ObjectId(id as string) });
+    await Supergroup.findByIdAndDelete(id);
+
+    const io = getIO();
+    io.to(`supergroup_${id}`).emit("supergroup_deleted", { supergroupId: id });
+
+    res.status(200).json({ message: "Supergroup deleted" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to delete supergroup", error });
+  }
+};
+
 // Delete topic
 export const deleteSupergroupTopic = async (req: Request, res: Response): Promise<void> => {
   try {

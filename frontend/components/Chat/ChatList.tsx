@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
-import { Search, UserPlus, X, MessageSquareOff, Users, Hash, Globe } from "lucide-react";
+import { Search, UserPlus, X, MessageSquareOff, Users, Hash, Globe, Trash2 } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { api } from "../../utils/api";
 import { UserAvatar } from "../Common/UserAvatar";
@@ -37,6 +37,8 @@ export const ChatList: React.FC<ChatListProps> = ({ currentUserId }) => {
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
   const [showCreateSupergroupModal, setShowCreateSupergroupModal] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<UnifiedItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const router = useRouter();
   const params = useParams();
   const { socket, connected } = useSocket();
@@ -210,6 +212,39 @@ export const ChatList: React.FC<ChatListProps> = ({ currentUserId }) => {
     return formatDistanceToNow(new Date(date), { addSuffix: false, locale: ru });
   };
 
+  const canDelete = (item: UnifiedItem) => {
+    if (item.type === "direct") return true;
+    return item.raw.admin?.toString() === currentUserId || item.raw.admin?._id?.toString() === currentUserId;
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent, item: UnifiedItem) => {
+    e.stopPropagation();
+    setConfirmDelete(item);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!confirmDelete) return;
+    setDeleting(true);
+    try {
+      if (confirmDelete.type === "direct") {
+        await api.deleteChat(confirmDelete.id);
+        setChats((prev) => prev.filter((c) => c._id !== confirmDelete.id));
+      } else if (confirmDelete.type === "group") {
+        await api.deleteGroup(confirmDelete.id);
+        setGroups((prev) => prev.filter((g) => g._id !== confirmDelete.id));
+      } else {
+        await api.deleteSupergroup(confirmDelete.id);
+        setSupergroups((prev) => prev.filter((sg) => sg._id !== confirmDelete.id));
+      }
+      if (params.id === confirmDelete.id) router.push("/chat");
+    } catch (error) {
+      console.error("Failed to delete", error);
+    } finally {
+      setDeleting(false);
+      setConfirmDelete(null);
+    }
+  };
+
   const handleItemClick = (item: UnifiedItem) => {
     if (item.type === "supergroup") {
       router.push(`/chat/supergroup/${item.id}`);
@@ -295,6 +330,34 @@ export const ChatList: React.FC<ChatListProps> = ({ currentUserId }) => {
         <CreateSupergroupModal onClose={() => setShowCreateSupergroupModal(false)} />
       )}
 
+      {/* Delete confirmation modal */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-card border border-border rounded-2xl p-6 w-80 shadow-2xl">
+            <h3 className="font-bold text-base mb-2">Удалить {confirmDelete.type === "direct" ? "чат" : "группу"}?</h3>
+            <p className="text-sm text-muted-foreground mb-5">
+              Все сообщения будут удалены навсегда. Это действие нельзя отменить.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                disabled={deleting}
+                className="flex-1 py-2 rounded-xl border border-border text-sm font-bold hover:bg-secondary transition-all"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={deleting}
+                className="flex-1 py-2 rounded-xl bg-destructive text-destructive-foreground text-sm font-bold hover:bg-destructive/90 transition-all disabled:opacity-50"
+              >
+                {deleting ? "Удаление..." : "Удалить"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Unified Chat + Group List */}
       <div className="flex-1 overflow-y-auto">
         {filteredItems.length === 0 ? (
@@ -318,7 +381,7 @@ export const ChatList: React.FC<ChatListProps> = ({ currentUserId }) => {
               <div
                 key={`${item.type}-${item.id}`}
                 onClick={() => handleItemClick(item)}
-                className={`px-4 py-3.5 border-b border-border/50 cursor-pointer transition-all ${
+                className={`group/item px-4 py-3.5 border-b border-border/50 cursor-pointer transition-all ${
                   isActive
                     ? "bg-secondary border-l-4 border-l-primary"
                     : "border-l-4 border-l-transparent hover:bg-secondary/50"
@@ -368,11 +431,21 @@ export const ChatList: React.FC<ChatListProps> = ({ currentUserId }) => {
                           </span>
                         )}
                       </div>
-                      {item.lastMessageTime && (
-                        <span className="text-muted-foreground text-[10px] font-medium shrink-0 ml-2">
-                          {formatMessageTime(item.lastMessageTime)}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1 shrink-0 ml-2">
+                        {canDelete(item) && (
+                          <button
+                            onClick={(e) => handleDeleteClick(e, item)}
+                            className="opacity-0 group-hover/item:opacity-100 text-muted-foreground hover:text-destructive p-1 rounded transition-all"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
+                        {item.lastMessageTime && (
+                          <span className="text-muted-foreground text-[10px] font-medium">
+                            {formatMessageTime(item.lastMessageTime)}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <p
                       className={`text-xs truncate ${

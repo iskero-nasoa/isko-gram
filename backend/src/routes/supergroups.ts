@@ -3,6 +3,7 @@ import {
   createSupergroup,
   getSupergroups,
   getSupergroup,
+  deleteSupergroup,
   createSupergroupTopic,
   getSupergroupTopics,
   getSupergroupTopicMessages,
@@ -19,6 +20,7 @@ router.use(authMiddleware);
 router.post("/", createSupergroup);
 router.get("/", getSupergroups);
 router.get("/:id", getSupergroup);
+router.delete("/:id", deleteSupergroup);
 router.post("/:id/topics", createSupergroupTopic);
 router.get("/:id/topics", getSupergroupTopics);
 router.get("/:id/topics/:topicId/messages", getSupergroupTopicMessages);
