@@ -122,8 +122,10 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     setUploadProgress(0);
 
     try {
-      // Create a file from the blob
-      const file = new File([blob], "voice-message.webm", { type: "audio/webm" });
+      // Create a file from the blob using its actual MIME type
+      const mime = blob.type || "audio/webm";
+      const ext = mime.includes("ogg") ? "ogg" : mime.includes("mp4") ? "mp4" : "webm";
+      const file = new File([blob], `voice-message.${ext}`, { type: mime });
       const uploadRes = await api.uploadFile(file, (progressEvent: any) => {
         const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
         setUploadProgress(percent);

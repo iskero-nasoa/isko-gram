@@ -14,15 +14,16 @@ uploadDirs.forEach((dir) => {
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     let dest = "uploads/";
-    if (file.mimetype.startsWith("image/")) {
+    const baseMime = file.mimetype.split(";")[0].trim();
+    if (baseMime.startsWith("image/")) {
       if (file.fieldname === "avatar") {
         dest = "uploads/avatars/";
       } else {
         dest = "uploads/images/";
       }
-    } else if (file.mimetype.startsWith("video/")) {
+    } else if (baseMime.startsWith("video/")) {
       dest = "uploads/videos/";
-    } else if (file.mimetype.startsWith("audio/")) {
+    } else if (baseMime.startsWith("audio/")) {
       dest = "uploads/audio/";
     }
     cb(null, path.join(process.cwd(), dest));
@@ -41,9 +42,10 @@ const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCa
     } else {
       cb(new Error("Invalid image type. Only JPEG, PNG, GIF, and WEBP are allowed."));
     }
-    } else if (file.mimetype.startsWith("audio/")) {
-    const validAudioTypes = ["audio/mpeg", "audio/wav", "audio/ogg", "audio/webm", "audio/mp4"];
-    if (validAudioTypes.includes(file.mimetype)) {
+  } else if (file.mimetype.startsWith("audio/")) {
+    const baseMime = file.mimetype.split(";")[0].trim();
+    const validAudioTypes = ["audio/mpeg", "audio/wav", "audio/ogg", "audio/webm", "audio/mp4", "audio/aac"];
+    if (validAudioTypes.includes(baseMime)) {
       cb(null, true);
     } else {
       cb(new Error("Invalid audio type."));
