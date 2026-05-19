@@ -104,38 +104,26 @@ export const deleteMessage = async (req: Request, res: Response): Promise<void> 
     }
 
     const isOwner = message.senderId.toString() === userId.toString();
+    const forEveryone = req.body?.forEveryone === true;
 
-    if (isOwner) {
-      // CASE 1: Delete MY OWN message (Hard Delete)
+    if (isOwner && forEveryone) {
+      // Hard delete — remove for everyone
       await Message.findByIdAndDelete(messageId);
-      
-      // Remove from chat
-      await Chat.findByIdAndUpdate(message.chatId, {
-         $pull: { messages: messageId }
-      });
+      await Chat.findByIdAndUpdate(message.chatId, { $pull: { messages: messageId } });
 
-      // Broadcast hard deletion to everyone in the chat
       const io = getIO();
       io.to(message.chatId.toString()).emit("message_deleted", messageId);
 
-      res.status(200).json({ 
-        message: "Message deleted for everyone", 
-        messageId, 
-        type: "hard" 
-      });
+      res.status(200).json({ message: "Message deleted for everyone", messageId, type: "hard" });
     } else {
-      // CASE 2: Delete OPPONENT's message (Soft Delete for me only)
+      // Soft delete — hide only for this user
       await DeletedMessage.findOneAndUpdate(
         { userId, messageId },
         { userId, messageId, deletedAt: new Date() },
         { upsert: true }
       );
 
-      res.status(200).json({ 
-        message: "Message hidden for you", 
-        messageId, 
-        type: "soft" 
-      });
+      res.status(200).json({ message: "Message hidden for you", messageId, type: "soft" });
     }
   } catch (error) {
     res.status(500).json({ message: "Failed to delete message", error });

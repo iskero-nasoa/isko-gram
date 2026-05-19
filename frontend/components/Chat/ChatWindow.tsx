@@ -6,7 +6,7 @@ import { MessageInput } from "./MessageInput";
 import { TypingIndicator } from "./TypingIndicator";
 import { useChat } from "../../hooks/useChat";
 import { useCall } from "../../context/CallContext";
-import { Search, Phone, Video, Info } from "lucide-react";
+import { Phone, Video, Info } from "lucide-react";
 import { UserAvatar } from "../Common/UserAvatar";
 import Link from "next/link";
 import { Message } from "../../types/chat";
@@ -41,10 +41,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ chatId, currentUserId, r
         </div>
         
         <div className="flex items-center gap-3 md:gap-5 text-muted-foreground">
-          <button className="hover:text-foreground transition-colors p-1">
-            <Search size={20} />
-          </button>
-          <button 
+          <button
             onClick={() => recipient?._id && initiateCall(recipient._id, "audio")}
             className="hover:text-foreground transition-colors p-1"
             title="Голосовой звонок"

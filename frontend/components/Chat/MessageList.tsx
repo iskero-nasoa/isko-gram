@@ -1,27 +1,28 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
 import { Message } from "../../types/chat";
 import { UserAvatar } from "../Common/UserAvatar";
-import { Trash2, MoreVertical, Reply } from "lucide-react";
+import { Trash2, Reply } from "lucide-react";
 import Link from "next/link";
 import { AudioPlayer } from "./AudioPlayer";
 
 interface MessageListProps {
   messages: Message[];
   currentUserId: string;
-  onDeleteMessage: (messageId: string) => void;
+  onDeleteMessage: (messageId: string, forEveryone?: boolean) => void;
   onReply?: (message: Message) => void;
 }
 
-export const MessageList: React.FC<MessageListProps> = ({ 
-  messages, 
-  currentUserId, 
+export const MessageList: React.FC<MessageListProps> = ({
+  messages,
+  currentUserId,
   onDeleteMessage,
   onReply
 }) => {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [deleteMenuFor, setDeleteMenuFor] = useState<string | null>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -68,17 +69,37 @@ export const MessageList: React.FC<MessageListProps> = ({
                 </button>
 
                 {/* Delete Button */}
-                <button 
-                  onClick={() => {
-                    if (window.confirm("Удалить сообщение для себя?")) {
-                      onDeleteMessage(msg._id);
-                    }
-                  }}
-                  className="p-2 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
-                  title="Удалить у себя"
-                >
-                  <Trash2 size={16} />
-                </button>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setDeleteMenuFor(deleteMenuFor === msg._id ? null : msg._id)}
+                    className="p-2 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
+                    title="Удалить"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+
+                  {deleteMenuFor === msg._id && (
+                    <div className={`absolute bottom-full mb-1 z-50 bg-card border border-border rounded-xl shadow-lg overflow-hidden min-w-[180px] ${isMe ? 'right-0' : 'left-0'}`}>
+                      {isMe && (
+                        <button
+                          type="button"
+                          onClick={() => { onDeleteMessage(msg._id, true); setDeleteMenuFor(null); }}
+                          className="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-red-500/10 transition-colors font-medium"
+                        >
+                          Delete for everyone
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => { onDeleteMessage(msg._id, false); setDeleteMenuFor(null); }}
+                        className="w-full text-left px-4 py-2.5 text-sm text-foreground hover:bg-secondary transition-colors"
+                      >
+                        Delete for me
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Avatar next to EACH message */}

@@ -224,8 +224,8 @@ export const api = {
     return data;
   },
 
-  deleteMessage: async (messageId: string) => {
-    const { data } = await apiClient.delete(`/messages/${messageId}`);
+  deleteMessage: async (messageId: string, forEveryone = false) => {
+    const { data } = await apiClient.delete(`/messages/${messageId}`, { data: { forEveryone } });
     return data;
   },
 
